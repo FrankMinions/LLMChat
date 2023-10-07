@@ -17,7 +17,7 @@ invisible_btn = gr.Button(interactive=False, visible=False)
 tokenizer = None
 model = None
 config = None
-message = None
+message = []
 
 def load_model(model_name: str):
     global tokenizer
