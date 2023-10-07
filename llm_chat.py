@@ -17,7 +17,7 @@ invisible_btn = gr.Button(interactive=False, visible=False)
 tokenizer = None
 model = None
 config = None
-
+message = None
 
 def load_model(model_name: str):
     global tokenizer
@@ -36,7 +36,7 @@ def load_model(model_name: str):
             config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
         elif model_name.lower().startswith("baichuan"):
             from transformers.generation.utils import GenerationConfig
-            config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
+            model.generation_config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
         else:
             pass
     return (state, [], "") + (enable_btn,) * 2
@@ -111,14 +111,16 @@ def qwen_chat(prompt, history, temperature, top_p, max_new_tokens):
 
 
 def baichuan_chat(prompt, history, temperature, top_p, max_new_tokens):
+    global message
     if not history:
         history = []
-    history.append({"role": "user", "content": prompt})
+    message.append({"role": "user", "content": prompt})
     full_response = ""
-    config.temperature = temperature
-    config.top_p = top_p
-    config.max_new_tokens = max_new_tokens
-    for response in model.chat(tokenizer, history, stream=True, generation_config=config):
+    model.generation_config.temperature = temperature
+    model.generation_config.top_p = top_p
+    model.generation_config.max_new_tokens = max_new_tokens
+    for response in model.chat(tokenizer, message, stream=True):
         full_response = response
-    history.append({"role": "assistant", "content": full_response})
+    message.append({"role": "assistant", "content": full_response})
+    history.append((prompt, full_response))
     return (history, history,) + (enable_btn,) * 2

@@ -10,6 +10,7 @@ MODELS = [
 ]
 
 MODEL_MAPPING_PATH = {
+    "LLaMA-2-7B-Chat": "",
     "Qwen-7B-Chat": "",
-    "LLaMA-2-7B-Chat": ""
+    "Baichuan2-7B-Chat": ""
 }
