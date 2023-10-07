@@ -27,7 +27,7 @@ def vote_last_response(state, vote_type, model_selector, request: gr.Request):
             "state": state,
             "ip": request.client.host,
         }
-        f.write(json.dumps(data) + "\n")
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
         
 def upvote_last_response(state, model_selector, request:gr.Request):
