@@ -45,13 +45,13 @@ def show_code(state):
 
 def clear_history(request: gr.Request):
     state = None
-    return (state, [], "", None,) + (enable_btn,) * 3
+    return (state, [], "", "", None,) + (enable_btn,) * 3
 
 
-def chat(model_selector, prompt, history, temperature, top_p, max_new_tokens):
+def chat(model_selector, prompt, inputs, history, temperature, top_p, max_new_tokens):
     if 'llama' in model_selector.lower():
         if 'code' in model_selector.lower():
-            prompt = CODE_PROMPT_TEMPLATE.format_map({'instruction': prompt, 'input': ''})
+            prompt = CODE_PROMPT_TEMPLATE.format_map({'instruction': prompt, 'input': inputs})
             response = code_llama_chat(prompt, history, temperature, top_p, max_new_tokens)
         else:
             response = llama_chat(prompt, history, temperature, top_p, max_new_tokens)
@@ -87,17 +87,28 @@ if __name__ == '__main__':
                 (os.path.join(os.path.dirname(__file__), "images/bot.png"))),).style(height=350)
 
         with gr.Row():
-
             with gr.Column(scale=0.85):
-                textbox = gr.Textbox(
+                instruction_box = gr.Textbox(
                     show_label=False,
-                    placeholder="请在此输入您的提示词并按Enter键:",
+                    placeholder="请在此输入您的提示词指令若没有与之配对的输入请直接按Enter键:",
+                    container=False,
+                    elem_id="instruction_box"
+                )
+
+            with gr.Column(scale=0.15, min_width=0):
+                send = gr.Button(value="发送", variant="primary")
+
+        with gr.Row():
+            with gr.Column(scale=0.85):
+                input_box = gr.Textbox(
+                    show_label=False,
+                    placeholder="请在此输入与您的提示词指令配对的输入并按Enter键(仅限Chinese-CodeLLaMA-2-7B):",
                     container=False,
                     elem_id="input_box"
                 )
 
             with gr.Column(scale=0.15, min_width=0):
-                send = gr.Button(value="发送", variant="primary")
+                send_disable = gr.Button(value="发送", variant="primary", interactive=False)
 
         with gr.Row():
             upvote_btn = gr.Button(value="👍 赞成")
@@ -139,19 +150,19 @@ if __name__ == '__main__':
 
         model_selector.change(load_model,
                               inputs=[model_selector],
-                              outputs=[state, chatbot, textbox] + [upvote_btn, downvote_btn, show_code_btn],
+                              outputs=[state, chatbot, instruction_box, input_box] + [upvote_btn, downvote_btn, show_code_btn],
                               show_progress=True,
                              )
 
-        textbox.submit(
+        instruction_box.submit(
             chat,
-            inputs=[model_selector, textbox, state, temperature, top_p, max_new_tokens],
+            inputs=[model_selector, instruction_box, input_box, state, temperature, top_p, max_new_tokens],
             outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         send.click(
             chat,
-            inputs=[model_selector, textbox, state, temperature, top_p, max_new_tokens],
+            inputs=[model_selector, instruction_box, input_box, state, temperature, top_p, max_new_tokens],
             outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
@@ -169,14 +180,14 @@ if __name__ == '__main__':
 
         regenerate_btn.click(
             chat,
-            inputs=[model_selector, textbox, state, temperature, top_p, max_new_tokens],
+            inputs=[model_selector, instruction_box, input_box, state, temperature, top_p, max_new_tokens],
             outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         clear_btn.click(
             clear_history,
             inputs=None,
-            outputs=[state, chatbot, textbox, code_column] + [upvote_btn, downvote_btn, show_code_btn],
+            outputs=[state, chatbot, instruction_box, input_box, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         show_code_btn.click(

@@ -41,7 +41,7 @@ def load_model(model_name: str):
             model.generation_config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
         else:
             pass
-    return (state, [], "") + (enable_btn,) * 3
+    return (state, [], "", "") + (enable_btn,) * 3
 
 
 def llama_chat(prompt, history, temperature, top_p, max_new_tokens):
