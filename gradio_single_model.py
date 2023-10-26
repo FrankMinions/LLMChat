@@ -3,9 +3,9 @@ import json
 import time
 import datetime
 import gradio as gr
-from llm_chat import load_model, llama_chat, qwen_chat, baichuan_chat
+from llm_chat import load_model, llama_chat, code_llama_chat, qwen_chat, baichuan_chat
 from llm_chat import no_change_btn, enable_btn, disable_btn, invisible_btn
-from config import MODELS
+from config import MODELS, CODE_PROMPT_TEMPLATE
 
 __file__ = os.path.abspath('file')
 
@@ -32,22 +32,29 @@ def vote_last_response(state, vote_type, model_selector, request: gr.Request):
         
 def upvote_last_response(state, model_selector, request:gr.Request):
     vote_last_response(state[-1], "upvote", model_selector, request)
-    return (state, state,) + (disable_btn,) * 2
+    return (state, state,) + (disable_btn,) * 3
 
 
 def downvote_last_response(state, model_selector, request:gr.Request):
     vote_last_response(state[-1], "downvote", model_selector, request)
-    return (state, state,) + (disable_btn,) * 2
+    return (state, state,) + (disable_btn,) * 3
 
-    
+
+def show_code(state):
+    return state[-1][1]
+
 def clear_history(request: gr.Request):
     state = None
-    return (state, [], "") + (enable_btn,) * 2
+    return (state, [], "", None,) + (enable_btn,) * 3
 
 
 def chat(model_selector, prompt, history, temperature, top_p, max_new_tokens):
-    if model_selector.lower().startswith("llama"):
-        response = llama_chat(prompt, history, temperature, top_p, max_new_tokens)
+    if 'llama' in model_selector.lower():
+        if 'code' in model_selector.lower():
+            prompt = CODE_PROMPT_TEMPLATE.format_map({'instruction': prompt, 'input': ''})
+            response = code_llama_chat(prompt, history, temperature, top_p, max_new_tokens)
+        else:
+            response = llama_chat(prompt, history, temperature, top_p, max_new_tokens)
     elif model_selector.lower().startswith("qwen"):
         response = qwen_chat(prompt, history, temperature, top_p, max_new_tokens)
     elif model_selector.lower().startswith("baichuan"):
@@ -98,6 +105,13 @@ if __name__ == '__main__':
             regenerate_btn = gr.Button(value="🔄 重新生成")
             clear_btn = gr.Button(value="🗑️ 清除历史")
 
+        with gr.Row():
+            with gr.Column():
+                code_column = gr.Code(value=None, language='python')
+
+        with gr.Row():
+            show_code_btn = gr.Button(value='显示格式化代码', variant='primary')
+
         with gr.Accordion("Parameters", open=False):
 
             temperature = gr.Slider(minimum=0.0,
@@ -125,44 +139,50 @@ if __name__ == '__main__':
 
         model_selector.change(load_model,
                               inputs=[model_selector],
-                              outputs=[state, chatbot, textbox] + [upvote_btn, downvote_btn],
-                              show_progress=False,
+                              outputs=[state, chatbot, textbox] + [upvote_btn, downvote_btn, show_code_btn],
+                              show_progress=True,
                              )
 
         textbox.submit(
             chat,
             inputs=[model_selector, textbox, state, temperature, top_p, max_new_tokens],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
+            outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         send.click(
             chat,
             inputs=[model_selector, textbox, state, temperature, top_p, max_new_tokens],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
+            outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         upvote_btn.click(
             upvote_last_response,
             inputs=[state, model_selector],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         downvote_btn.click(
             downvote_last_response,
             inputs=[state, model_selector],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         regenerate_btn.click(
             chat,
             inputs=[model_selector, textbox, state, temperature, top_p, max_new_tokens],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
+            outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
         )
 
         clear_btn.click(
             clear_history,
             inputs=None,
-            outputs=[state, chatbot, textbox] + [upvote_btn, downvote_btn],
+            outputs=[state, chatbot, textbox, code_column] + [upvote_btn, downvote_btn, show_code_btn],
+        )
+
+        show_code_btn.click(
+            show_code,
+            inputs=[state],
+            outputs=[code_column],
         )
 
     demo.queue()
