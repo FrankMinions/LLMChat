@@ -10,8 +10,7 @@ First you need to do the following：
 pip install -r requirements.txt
 ```
 and then you need carry out:
-```
-bash
+```bash
 python gradio_single_model.py
 ```
 You will get the following interface:
