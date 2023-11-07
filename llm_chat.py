@@ -41,7 +41,7 @@ def load_model(model_name: str):
             model.generation_config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
         else:
             pass
-    return (state, [], "", "") + (enable_btn,) * 3
+    return (state, [], "",) + (enable_btn,) * 2
 
 
 def llama_chat(prompt, history, temperature, top_p, max_new_tokens):
@@ -70,35 +70,7 @@ def llama_chat(prompt, history, temperature, top_p, max_new_tokens):
     history_token_ids = torch.concat((history_token_ids, response_ids.cpu()), dim=1)
     response = tokenizer.batch_decode(response_ids)[0].strip()
     history.append((prompt, response))
-    return (history, history, None,) + (enable_btn,) * 3
-
-
-def code_llama_chat(prompt, history, temperature, top_p, max_new_tokens):
-    global history_token_ids
-    if not history:
-        history = []
-    generation_config = dict(
-        temperature=temperature,
-        top_k=0,
-        top_p=top_p,
-        do_sample=True,
-        max_new_tokens=max_new_tokens
-    )
-    history_max_len = 2048
-    input_ids = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).input_ids
-    history_token_ids = torch.concat((history_token_ids, input_ids), dim=1)
-    model_input_ids = history_token_ids[:, -history_max_len:].to(device)
-    with torch.no_grad():
-        generation_output = model.generate(
-            input_ids=model_input_ids,
-            eos_token_id=tokenizer.eos_token_id,
-            **generation_config)
-    model_input_ids_len = model_input_ids.size(1)
-    response_ids = generation_output[:, model_input_ids_len:]
-    history_token_ids = torch.concat((history_token_ids, response_ids.cpu()), dim=1)
-    response = tokenizer.batch_decode(response_ids)[0].strip()
-    history.append((prompt.split('### 指令:\n')[-1].split('### 输入:\n')[0].strip(), response.replace('<s>', '').replace('</s>', '')))
-    return (history, history, None,) + (enable_btn,) * 3
+    return (history, history,) + (enable_btn,) * 2
 
 
 def _parse_text(text):
@@ -143,7 +115,7 @@ def qwen_chat(prompt, history, temperature, top_p, max_new_tokens):
     for response in model.chat_stream(tokenizer, prompt, history=history, generation_config=config):
         full_response = _parse_text(response)
     history.append((prompt, full_response))
-    return (history, history, None,) + (enable_btn,) * 3
+    return (history, history,) + (enable_btn,) * 2
 
 
 def baichuan_chat(prompt, history, temperature, top_p, max_new_tokens):
@@ -160,4 +132,4 @@ def baichuan_chat(prompt, history, temperature, top_p, max_new_tokens):
         full_response = response
     message.append({"role": "assistant", "content": full_response})
     history.append((prompt, full_response))
-    return (history, history, None,) + (enable_btn,) * 3
+    return (history, history,) + (enable_btn,) * 2

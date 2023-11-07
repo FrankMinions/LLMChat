@@ -3,9 +3,9 @@ import json
 import time
 import datetime
 import gradio as gr
-from llm_chat import load_model, llama_chat, code_llama_chat, qwen_chat, baichuan_chat
+from llm_chat import load_model, llama_chat, qwen_chat, baichuan_chat
 from llm_chat import no_change_btn, enable_btn, disable_btn, invisible_btn
-from config import MODELS, CODE_PROMPT_TEMPLATE
+from config import MODELS
 
 __file__ = os.path.abspath('file')
 
@@ -32,29 +32,22 @@ def vote_last_response(state, vote_type, model_selector, request: gr.Request):
         
 def upvote_last_response(state, model_selector, request:gr.Request):
     vote_last_response(state[-1], "upvote", model_selector, request)
-    return (state, state,) + (disable_btn,) * 3
+    return (state, state,) + (disable_btn,) * 2
 
 
 def downvote_last_response(state, model_selector, request:gr.Request):
     vote_last_response(state[-1], "downvote", model_selector, request)
-    return (state, state,) + (disable_btn,) * 3
+    return (state, state,) + (disable_btn,) * 2
 
-
-def show_code(state):
-    return state[-1][1]
 
 def clear_history(request: gr.Request):
     state = None
-    return (state, [], "", "", None,) + (enable_btn,) * 3
+    return (state, [], "", "", None,) + (enable_btn,) * 2
 
 
-def chat(model_selector, prompt, inputs, history, temperature, top_p, max_new_tokens):
+def chat(model_selector, prompt, history, temperature, top_p, max_new_tokens):
     if 'llama' in model_selector.lower():
-        if 'code' in model_selector.lower():
-            prompt = CODE_PROMPT_TEMPLATE.format_map({'instruction': prompt, 'input': inputs})
-            response = code_llama_chat(prompt, history, temperature, top_p, max_new_tokens)
-        else:
-            response = llama_chat(prompt, history, temperature, top_p, max_new_tokens)
+        response = llama_chat(prompt, history, temperature, top_p, max_new_tokens)
     elif model_selector.lower().startswith("qwen"):
         response = qwen_chat(prompt, history, temperature, top_p, max_new_tokens)
     elif model_selector.lower().startswith("baichuan"):
@@ -88,9 +81,9 @@ if __name__ == '__main__':
 
         with gr.Row():
             with gr.Column(scale=0.85):
-                instruction_box = gr.Textbox(
+                prompt_box = gr.Textbox(
                     show_label=False,
-                    placeholder="请在此输入您的提示词指令若没有与之配对的输入请直接按Enter键:",
+                    placeholder="请在此输入您的提示词并按Enter键:",
                     container=False,
                     elem_id="instruction_box"
                 )
@@ -99,29 +92,10 @@ if __name__ == '__main__':
                 send = gr.Button(value="发送", variant="primary")
 
         with gr.Row():
-            with gr.Column(scale=0.85):
-                input_box = gr.Textbox(
-                    show_label=False,
-                    placeholder="请在此输入与您的提示词指令配对的输入并按Enter键(仅限Chinese-CodeLLaMA-2-7B):",
-                    container=False,
-                    elem_id="input_box"
-                )
-
-            with gr.Column(scale=0.15, min_width=0):
-                send_disable = gr.Button(value="发送", variant="primary", interactive=False)
-
-        with gr.Row():
             upvote_btn = gr.Button(value="👍 赞成")
             downvote_btn = gr.Button(value="👎 否决")
             regenerate_btn = gr.Button(value="🔄 重新生成")
             clear_btn = gr.Button(value="🗑️ 清除历史")
-
-        with gr.Row():
-            with gr.Column():
-                code_column = gr.Code(value=None, language='python')
-
-        with gr.Row():
-            show_code_btn = gr.Button(value='显示格式化代码', variant='primary')
 
         with gr.Accordion("Parameters", open=False):
 
@@ -146,54 +120,49 @@ if __name__ == '__main__':
                                        interactivate=True,
                                        label="Max new tokens")
 
-        load_model(model_selector.value)
+        # load_model(model_selector.value)
 
-        model_selector.change(load_model,
-                              inputs=[model_selector],
-                              outputs=[state, chatbot, instruction_box, input_box] + [upvote_btn, downvote_btn, show_code_btn],
-                              show_progress=True,
-                             )
+        model_selector.change(
+            load_model,
+            inputs=[model_selector],
+            outputs=[state, chatbot, prompt_box] + [upvote_btn, downvote_btn],
+            show_progress=True,
+        )
 
-        instruction_box.submit(
+        prompt_box.submit(
             chat,
-            inputs=[model_selector, instruction_box, input_box, state, temperature, top_p, max_new_tokens],
-            outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
+            inputs=[model_selector, prompt_box, state, temperature, top_p, max_new_tokens],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
         )
 
         send.click(
             chat,
-            inputs=[model_selector, instruction_box, input_box, state, temperature, top_p, max_new_tokens],
-            outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
+            inputs=[model_selector, prompt_box, state, temperature, top_p, max_new_tokens],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
         )
 
         upvote_btn.click(
             upvote_last_response,
             inputs=[state, model_selector],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn, show_code_btn],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
         )
 
         downvote_btn.click(
             downvote_last_response,
             inputs=[state, model_selector],
-            outputs=[chatbot, state] + [upvote_btn, downvote_btn, show_code_btn],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
         )
 
         regenerate_btn.click(
             chat,
-            inputs=[model_selector, instruction_box, input_box, state, temperature, top_p, max_new_tokens],
-            outputs=[chatbot, state, code_column] + [upvote_btn, downvote_btn, show_code_btn],
+            inputs=[model_selector, prompt_box, state, temperature, top_p, max_new_tokens],
+            outputs=[chatbot, state] + [upvote_btn, downvote_btn],
         )
 
         clear_btn.click(
             clear_history,
             inputs=None,
-            outputs=[state, chatbot, instruction_box, input_box, code_column] + [upvote_btn, downvote_btn, show_code_btn],
-        )
-
-        show_code_btn.click(
-            show_code,
-            inputs=[state],
-            outputs=[code_column],
+            outputs=[state, chatbot, prompt_box] + [upvote_btn, downvote_btn],
         )
 
     demo.queue()
