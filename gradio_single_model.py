@@ -120,7 +120,7 @@ if __name__ == '__main__':
                                        interactivate=True,
                                        label="Max new tokens")
 
-        # load_model(model_selector.value)
+        load_model(model_selector.value)
 
         model_selector.change(
             load_model,
