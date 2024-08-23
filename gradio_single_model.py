@@ -42,7 +42,7 @@ def downvote_last_response(state, model_selector, request:gr.Request):
 
 def clear_history(request: gr.Request):
     state = None
-    return (state, [], "", "", None,) + (enable_btn,) * 2
+    return (state, [], "",) + (enable_btn,) * 2
 
 
 def chat(model_selector, prompt, history, temperature, top_p, max_new_tokens):
